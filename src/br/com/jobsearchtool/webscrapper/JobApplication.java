@@ -4,6 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JobApplication {
+	@Override
+	public String toString() {
+		return "JobApplication [applicationUrl=" + applicationUrl + ", applicationTitle=" + applicationTitle
+				+ ", applicationDescription=" + applicationDescription + ", jobAdress=" + jobAdress + ", companyName="
+				+ companyName + ", countryCode=" + countryCode + ", paymentPerMonth=" + paymentPerMonth
+				+ ", applicationKeyWords=" + applicationKeyWords + ", workplace=" + workplace + ", journey=" + journey
+				+ ", contract=" + contract + "]";
+	}
 	private String applicationUrl; 
 	private String applicationTitle; 
 	private String applicationDescription;
