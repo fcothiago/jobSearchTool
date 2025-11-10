@@ -22,9 +22,19 @@ import br.com.jobsearchtool.webscrapper.hiringdetails.*;
 public class Inhire implements WebDomain{
 	final private String apiURL = "https://api.inhire.app/job-posts/public/pages";
 	private String getApplicationURL(String domain,String jobID,String title) {
-		String url = domain+"/vagas/" +"/";
-		String urlSuffix = title.toLowerCase().replaceAll("[^a-zA-Z0-9]", "-");
-		return url+urlSuffix;	
+		String url = domain+"/vagas/"+jobID+"/";
+		String urlSuffix = title.toLowerCase();
+		for(int i = 0;i < urlSuffix.length();i++)
+		{
+			char c = urlSuffix.charAt(i);
+			if( ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') )
+				url += c;
+			else if(c == ' ')
+				url += '-';
+			else if(c == '|')
+				url += "or";
+		}
+		return url;	
 	}
 	private List<JobApplication> parseRequest(String json,String domain){
         JSONObject obj = new JSONObject(json);
@@ -59,7 +69,6 @@ public class Inhire implements WebDomain{
 	}
 	@Override
 	public List<JobApplication> softSearch(){
-		// TODO Auto-generated method stub
 		final List<String> domains = LoadSubDomains.load("/subdomains/inhire.txt");
 		for(String domain : domains)
 		{
@@ -75,8 +84,6 @@ public class Inhire implements WebDomain{
 	            if(response.statusCode() != 200)
 	            	continue;
 	            parseRequest(response.body(),domain);
-	            System.out.println("Status: " + response.statusCode());
-	            System.out.println("Body: " + response.body());
 			}catch(MalformedURLException e){
 				e.printStackTrace();
 			}catch(IOException e){
