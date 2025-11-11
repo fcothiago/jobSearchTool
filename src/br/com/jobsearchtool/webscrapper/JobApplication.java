@@ -1,5 +1,7 @@
 package br.com.jobsearchtool.webscrapper;
 import br.com.jobsearchtool.webscrapper.hiringdetails.*;
+
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +21,7 @@ public class JobApplication {
 	private String companyName;
 	private String countryCode;
 	private float paymentPerMonth;
+	private LocalDate date;
 	private List<String> applicationKeyWords;
 	private WorkPlaceType workplace = WorkPlaceType.UNKNOWN;
 	private JourneyType journey = JourneyType.UNKNOWW;
@@ -98,5 +101,11 @@ public class JobApplication {
 	}
 	public void setContract(ContractType contract) {
 		this.contract = contract;
+	}
+	public LocalDate getDate() {
+		return date;
+	}
+	public void setDate(LocalDate date) {
+		this.date = date;
 	}
 }
