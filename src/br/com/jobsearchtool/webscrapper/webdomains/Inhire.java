@@ -1,6 +1,9 @@
 package br.com.jobsearchtool.webscrapper.webdomains;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.io.IOException;
@@ -17,7 +20,6 @@ import br.com.jobsearchtool.webscrapper.JobApplication;
 import br.com.jobsearchtool.webscrapper.LoadSubDomains;
 import br.com.jobsearchtool.webscrapper.WebDomain;
 import br.com.jobsearchtool.webscrapper.hiringdetails.*;
-
 
 public class Inhire implements WebDomain{
 	final private String apiURL = "https://api.inhire.app/job-posts/public/pages";
@@ -40,11 +42,11 @@ public class Inhire implements WebDomain{
         JSONObject obj = new JSONObject(json);
         JSONArray jobsPage = obj.getJSONArray("jobsPage");
         List<JobApplication> result = new ArrayList<JobApplication>();
-    	System.out.println(jobsPage.length());
         for(int i = 0; i < jobsPage.length(); i++)
         {
         	JSONObject jobInfosObj = jobsPage.getJSONObject(i);
         	JobApplication application = new JobApplication();
+        	application.setCompanyName(domain.split("\\.")[0]);
         	application.setApplicationTitle(jobInfosObj.getString("displayName"));
         	application.setApplicationUrl(getApplicationURL(domain,jobInfosObj.getString("jobId"),application.getApplicationTitle()));
         	application.setJobAdress(jobInfosObj.getString("location"));
@@ -62,13 +64,13 @@ public class Inhire implements WebDomain{
         		default:
         			application.setWorkplace(WorkPlaceType.UNKNOWN);
         	}
-        	System.out.println(application);
         	result.add(application);
         }
 		return result;
 	}
 	@Override
 	public List<JobApplication> softSearch(){
+		List<JobApplication> jobs = new ArrayList<JobApplication>();
 		final List<String> domains = LoadSubDomains.load("/subdomains/inhire.txt");
 		for(String domain : domains)
 		{
@@ -83,18 +85,13 @@ public class Inhire implements WebDomain{
 	            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 	            if(response.statusCode() != 200)
 	            	continue;
-	            parseRequest(response.body(),domain);
-			}catch(MalformedURLException e){
-				e.printStackTrace();
-			}catch(IOException e){
-				e.printStackTrace();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
+	            for(JobApplication job : parseRequest(response.body(),domain))
+	            	jobs.add(job);           
+			}catch(IOException | InterruptedException e){
 				e.printStackTrace();
 			}
-			break;
 		}
-		return null;
+		return jobs;
 	}
 
 	@Override
@@ -105,8 +102,31 @@ public class Inhire implements WebDomain{
 
 	@Override
 	public List<JobApplication> deepSearch() {
-		// TODO Auto-generated method stub
-		return null;
+		List<JobApplication> jobs = softSearch();
+		for(JobApplication job : jobs)
+		{
+			try 
+			{
+				final String XTenant = job.getApplicationUrl().split("\\.")[0];
+				final String[] fields = job.getApplicationUrl().split("/");
+				final String Id = fields[fields.length - 2];
+				HttpClient client = HttpClient.newHttpClient();
+				HttpRequest request = HttpRequest.newBuilder()
+            								 .uri(URI.create(apiURL+"/"+Id))
+            					             .header("X-Tenant", XTenant)
+            					             .GET()
+            								 .build();
+				HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+	            if(response.statusCode() != 200)
+	            	continue;
+	            JSONObject obj = new JSONObject(response.body());
+	            job.setApplicationDescription(obj.getString("about"));
+	            job.setDate(LocalDate.ofInstant(Instant.parse(obj.getString("updatedAt")),ZoneId.systemDefault() ));
+			}catch (IOException | InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		return jobs;
 	}
 
 	@Override
