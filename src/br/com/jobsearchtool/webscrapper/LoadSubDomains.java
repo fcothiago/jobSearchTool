@@ -14,10 +14,8 @@ public final class LoadSubDomains {
 				throw new RuntimeException("Failed to parse " + fileName + " : " + "File not found");
 			Stream<String> stream = new BufferedReader(new InputStreamReader(inputStream)).lines();
 			return stream.collect(Collectors.toList());
-		} catch (IllegalArgumentException e) {
+		} catch (IllegalArgumentException | IOException e) {
 			throw new RuntimeException("Failed to parse " + fileName + " : " + e.getMessage());
-		} catch (IOException e) {
-			throw new RuntimeException("Failed to close " + fileName + " : " + e.getMessage());
 		}
 	}
 }

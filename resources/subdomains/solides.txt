@@ -668,3 +668,4 @@ ghenovabrasil.vagas.solides.com.br
 guaracamp.vagas.solides.com.br
 socioambiental.vagas.solides.com.br
 team.vagas.solides.com.br
+grupofan.vagas.solides.com.br

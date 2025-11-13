@@ -53,8 +53,29 @@ public class Solides implements WebDomain {
 		String suffix = fields[1].replaceFirst("vacancies", "vaga");
 		return prefix + ".vagas.solides.com.br" + suffix;
 	}
-	private void extractJobWorkplace(JobApplication job){
-		
+	private WorkPlaceType extractJobWorkplace(JSONObject json){
+		switch(json.getString("jobType")) 
+		{
+			case "presencial":
+				return WorkPlaceType.PRESENCIAL;
+			case "remoto":
+				return WorkPlaceType.HOMEOFFICE;
+			case "hibrido":
+				return WorkPlaceType.HYBRID;
+			default:
+				return WorkPlaceType.UNKNOWN;
+		}
+	}
+	private List<String> extractKeyWords(JSONObject json){
+		final String [] fields = {"benefits","education","occupationAreas","recruitmentContractType"};
+		List<String> result = new ArrayList<String>();
+		for(String field : fields)
+		{
+			JSONArray array = json.getJSONArray(field);
+			for(int i = 0;i < array.length();i++)
+				result.add(array.getJSONObject(i).getString("name"));
+		}
+		return result;
 	}
 	private List<JobApplication> parseJsonObject(JSONObject json){
 		List<JobApplication> jobs = new ArrayList<JobApplication>();
@@ -62,12 +83,14 @@ public class Solides implements WebDomain {
 		for(int i = 0;i < array.length();i++){
 			JSONObject obj = array.getJSONObject(i);
 			JobApplication job = new JobApplication();
-			//presencial hibrido remoto
 			job.setApplicationTitle(obj.getString("title"));
 			job.setApplicationDescription(obj.getString("description"));
 			job.setApplicationUrl(extractJobURL(obj));
 			job.setCompanyName(obj.getString("companyName"));
-			System.out.println(job);
+			job.setWorkplace(extractJobWorkplace(obj));
+			job.setApplicationKeyWords(extractKeyWords(obj));
+			job.setDate(LocalDate.parse(obj.getString("createdAt")));
+			jobs.add(job);
 		}
 		return jobs;
 	}
@@ -77,6 +100,8 @@ public class Solides implements WebDomain {
 		for(String domain : domains){
 			JSONObject obj = makeAPIRequest(domain,1);
 			List<JobApplication> jobs = parseJsonObject(obj);
+			for(JobApplication job : jobs)
+				result.add(job);
 			break;
 		}
 		return result;
@@ -90,8 +115,22 @@ public class Solides implements WebDomain {
 
 	@Override
 	public List<JobApplication> deepSearch() {
-		// TODO Auto-generated method stub
-		return null;
+		List<JobApplication> result = new ArrayList<JobApplication>();
+		final List<String> domains = LoadSubDomains.load("/subdomains/solides.txt");
+		for(String domain : domains)
+		{
+			int totalPage = 0;
+			for(int page = 1;page < totalPage;page++)
+			{
+				JSONObject obj = makeAPIRequest(domain,page);
+				totalPage = obj.getInt("totalPages");
+				List<JobApplication> jobs = parseJsonObject(obj);
+				for(JobApplication job : jobs)
+					result.add(job);
+			}
+			break;
+		}
+		return result;
 	}
 
 	@Override
