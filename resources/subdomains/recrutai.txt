@@ -1,3 +1,4 @@
+vagasdiaadia.jobs.recrut.ai
 combioenergia.jobs.recrut.ai
 deltasuper.jobs.recrut.ai
 grupoautomotive.jobs.recrut.ai
@@ -14,7 +15,6 @@ jem.jobs.recrut.ai
 salesianasne.jobs.recrut.ai
 verdemar.jobs.recrut.ai
 grupovia1.jobs.recrut.ai
-vagasdiaadia.jobs.recrut.ai
 dilnor.jobs.recrut.ai
 csprojetos.jobs.recrut.ai
 magnetron.jobs.recrut.ai

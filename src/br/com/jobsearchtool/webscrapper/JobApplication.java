@@ -9,7 +9,7 @@ public class JobApplication {
 	@Override
 	public String toString() {
 		return "JobApplication [applicationUrl=" + applicationUrl + ", applicationTitle=" + applicationTitle
-				+ ", applicationDescription=" + applicationDescription.substring(0,10) + ", jobAdress=" + jobAdress + ", companyName="
+				+ ", applicationDescription=" + applicationDescription + ", jobAdress=" + jobAdress + ", companyName="
 				+ companyName + ", countryCode=" + countryCode + ", paymentPerMonth=" + paymentPerMonth
 				+ ", applicationKeyWords=" + applicationKeyWords + ", workplace=" + workplace + ", journey=" + journey
 				+ ", contract=" + contract + "]";

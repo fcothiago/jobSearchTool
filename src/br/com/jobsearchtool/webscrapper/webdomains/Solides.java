@@ -1,18 +1,15 @@
 package br.com.jobsearchtool.webscrapper.webdomains;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.http.client.utils.URIBuilder;
 import org.json.JSONArray;
@@ -21,7 +18,7 @@ import org.json.JSONObject;
 import br.com.jobsearchtool.webscrapper.JobApplication;
 import br.com.jobsearchtool.webscrapper.LoadSubDomains;
 import br.com.jobsearchtool.webscrapper.WebDomain;
-import br.com.jobsearchtool.webscrapper.hiringdetails.*;
+import br.com.jobsearchtool.webscrapper.hiringdetails.WorkPlaceType;
 
 public class Solides implements WebDomain {
 	final private String apiURL = "https://apigw.solides.com.br/jobs/v3/home/vacancy";
@@ -102,7 +99,6 @@ public class Solides implements WebDomain {
 			List<JobApplication> jobs = parseJsonObject(obj);
 			for(JobApplication job : jobs)
 				result.add(job);
-			break;
 		}
 		return result;
 	}
@@ -128,7 +124,6 @@ public class Solides implements WebDomain {
 				for(JobApplication job : jobs)
 					result.add(job);
 			}
-			break;
 		}
 		return result;
 	}
