@@ -16,11 +16,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import br.com.jobsearchtool.webscrapper.JobApplication;
-import br.com.jobsearchtool.webscrapper.LoadSubDomains;
+import br.com.jobsearchtool.webscrapper.Utils;
 import br.com.jobsearchtool.webscrapper.WebDomain;
 import br.com.jobsearchtool.webscrapper.hiringdetails.WorkPlaceType;
 
-public class Solides implements WebDomain {
+public class Solides implements Runnable {
 	final private String apiURL = "https://apigw.solides.com.br/jobs/v3/home/vacancy";
 	private JSONObject makeAPIRequest(String domain,int page){
 		final String slug = domain.split("\\.")[0];
@@ -93,7 +93,7 @@ public class Solides implements WebDomain {
 	}
 	public List<JobApplication> softSearch() {
 		List<JobApplication> result = new ArrayList<JobApplication>();
-		final List<String> domains = LoadSubDomains.load("/subdomains/solides.txt");
+		final List<String> domains = Utils.loadSubdomains("/subdomains/solides.txt");
 		for(String domain : domains){
 			JSONObject obj = makeAPIRequest(domain,1);
 			List<JobApplication> jobs = parseJsonObject(obj);
@@ -103,16 +103,14 @@ public class Solides implements WebDomain {
 		return result;
 	}
 
-	@Override
 	public List<JobApplication> softSearch(LocalTime startDate) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
-	@Override
 	public List<JobApplication> deepSearch() {
 		List<JobApplication> result = new ArrayList<JobApplication>();
-		final List<String> domains = LoadSubDomains.load("/subdomains/solides.txt");
+		final List<String> domains = Utils.loadSubdomains("/subdomains/solides.txt");
 		for(String domain : domains)
 		{
 			int totalPage = 0;
@@ -127,11 +125,14 @@ public class Solides implements WebDomain {
 		}
 		return result;
 	}
-
-	@Override
 	public List<JobApplication> deepSearch(LocalTime startDate) {
 		// TODO Auto-generated method stub
 		return null;
+	}
+	@Override
+	public void run() {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

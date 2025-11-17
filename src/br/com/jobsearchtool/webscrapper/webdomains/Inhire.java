@@ -17,11 +17,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import br.com.jobsearchtool.webscrapper.JobApplication;
-import br.com.jobsearchtool.webscrapper.LoadSubDomains;
+import br.com.jobsearchtool.webscrapper.Utils;
 import br.com.jobsearchtool.webscrapper.WebDomain;
 import br.com.jobsearchtool.webscrapper.hiringdetails.*;
 
-public class Inhire implements WebDomain{
+public class Inhire implements Runnable{
 	final private String apiURL = "https://api.inhire.app/job-posts/public/pages";
 	private String getApplicationURL(String domain,String jobID,String title) {
 		String url = domain+"/vagas/"+jobID+"/";
@@ -68,10 +68,9 @@ public class Inhire implements WebDomain{
         }
 		return result;
 	}
-	@Override
 	public List<JobApplication> softSearch(){
 		List<JobApplication> jobs = new ArrayList<JobApplication>();
-		final List<String> domains = LoadSubDomains.load("/subdomains/inhire.txt");
+		final List<String> domains = Utils.loadSubdomains("/subdomains/inhire.txt");
 		for(String domain : domains)
 		{
 			final String XTenant = domain.split("\\.")[0];
@@ -93,14 +92,10 @@ public class Inhire implements WebDomain{
 		}
 		return jobs;
 	}
-
-	@Override
 	public List<JobApplication> softSearch(LocalTime startDate) {
 		// TODO Auto-generated method stub
 		return null;
 	}
-
-	@Override
 	public List<JobApplication> deepSearch() {
 		List<JobApplication> jobs = softSearch();
 		for(JobApplication job : jobs)
@@ -128,11 +123,14 @@ public class Inhire implements WebDomain{
 		}
 		return jobs;
 	}
-
-	@Override
 	public List<JobApplication> deepSearch(LocalTime startDate) {
 		// TODO Auto-generated method stub
 		return null;
+	}
+	@Override
+	public void run() {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

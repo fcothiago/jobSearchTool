@@ -20,21 +20,23 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.lang.Thread;
 
 import br.com.jobsearchtool.webscrapper.JobApplication;
-import br.com.jobsearchtool.webscrapper.LoadSubDomains;
-import br.com.jobsearchtool.webscrapper.WebDomain;
+import br.com.jobsearchtool.webscrapper.Utils;
 import br.com.jobsearchtool.webscrapper.hiringdetails.WorkPlaceType;
 
-public class Recrutai implements WebDomain {
-	final String apiURLSuffix = "/company/public-jobs/*/*/*/*/*/?_=";
+public class Recrutai implements Runnable {
+	final private String apiURLSuffix = "/company/public-jobs/*/*/*/*/*/?_=";
+	private String outputPath = "";
+	private JSONObject jobsDB;
+	private int delayBetweenSubdomains = 1000;
+	private int delayBetweenJobApplication = 500;
+	private int numOfThreads = 4;
 	private String extractApplicationURL(Element anchor,String domain){
 		return "https://"+domain+"/"+anchor.attr("href");
 	}
-	private String extractApplicationAddress(){
-		return "";
-	}
-	private WorkPlaceType extractApplicationWorplace(JSONObject address){
+	private WorkPlaceType extractApplicationWorkplace(JSONObject address){
 		return WorkPlaceType.PRESENCIAL;
 	}
 	private List<JobApplication> parseRequest(String json,String domain){
@@ -50,36 +52,6 @@ public class Recrutai implements WebDomain {
 			jobs.add(job);
 		}
 		return jobs;
-	}
-	@Override
-	public List<JobApplication> softSearch() {
-		List<JobApplication> jobs = new ArrayList<JobApplication>();
-		final List<String> domains = LoadSubDomains.load("/subdomains/recrutai.txt");
-		for(String domain : domains)
-		{
-			try{
-				final String apiURL = "https://" + domain + apiURLSuffix + System.currentTimeMillis();
-            	HttpClient client = HttpClient.newHttpClient();
-            	HttpRequest request = HttpRequest.newBuilder()
-            								 	 .uri(URI.create(apiURL))
-            								 	 .GET()
-            								 	 .build();
-            	HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-	            if(response.statusCode() != 200)
-	            	continue;
-	            for(JobApplication job : parseRequest(response.body(),domain))
-	            	jobs.add(job); 
-			}catch(IOException | InterruptedException e){
-				e.printStackTrace();
-			}
-		}
-		return jobs;
-	}
-
-	@Override
-	public List<JobApplication> softSearch(LocalTime startDate) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 	private WorkPlaceType extractWorkPlace(JSONObject obj){
 		if(obj.has("jobLocationType") && obj.getString("jobLocationType") == "TELECOMMUTE")
@@ -98,31 +70,85 @@ public class Recrutai implements WebDomain {
 		}
 		return "";
 	}
-	public List<JobApplication> deepSearch() {
-		List<JobApplication> jobs = softSearch();
-		for(JobApplication job : jobs){
-	        try {
-	    		Document doc = Jsoup.connect(job.getApplicationUrl()).get();
+	public List<JobApplication> extractJobApplications(String domain) {
+		List<JobApplication> jobs = new ArrayList<JobApplication>();
+		try{
+			final String apiURL = "https://" + domain + apiURLSuffix + System.currentTimeMillis();
+			HttpClient client = HttpClient.newHttpClient();
+			HttpRequest request = HttpRequest.newBuilder()
+					.uri(URI.create(apiURL))
+					.GET()
+					.build();
+			HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+			if(response.statusCode() != 200)
+				return jobs;
+			for(JobApplication job : parseRequest(response.body(),domain))
+				jobs.add(job); 
+		}catch(IOException | InterruptedException e){
+			e.printStackTrace();
+		}
+		return jobs;
+	}
+	public Thread startJobInfosThread(JobApplication job) {
+		Thread t = new Thread(() -> {
+			try {
+				Document doc = Jsoup.connect(job.getApplicationUrl()).get();
 				String json = doc.select("script[type=application/ld+json]").html();
 				JSONObject obj = new JSONObject(json);
 				job.setApplicationTitle(obj.getString("title"));
 				job.setApplicationDescription(obj.getString("description"));
 				Instant instant = Instant.parse(obj.getString("datePosted"));
 				job.setDate(instant.atZone(ZoneId.systemDefault()).toLocalDate());
-				job.setWorkplace(extractApplicationWorplace(obj));
+				job.setWorkplace(extractApplicationWorkplace(obj));
 				job.setJobAdress(extractJobAdrees(obj));
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				System.out.println("Got new JobApplication " + job.getApplicationUrl());
+			}catch (IOException e){
+				System.out.println("Failed to extractJobApplication from " + job.getApplicationUrl());
+				e.printStackTrace();
+			}
+		});
+		t.start();
+		return t;
+	}
+	public void extractJobInfos(List<JobApplication> jobs) {
+		for(int i = 0;i < jobs.size();i += numOfThreads)
+		{
+			try {
+				List<Thread> threads = new ArrayList<Thread>();
+				List<JobApplication> sublist = jobs.subList(i,i+numOfThreads);
+				for(int j = 0; j < sublist.size();j++)
+					threads.add( startJobInfosThread(sublist.get(j)) );
+				for(Thread t : threads)
+					t.join();
+				Thread.sleep(delayBetweenJobApplication);
+			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 		}
-		return null;
 	}
-
 	@Override
-	public List<JobApplication> deepSearch(LocalTime startDate) {
-		// TODO Auto-generated method stub
-		return null;
+	public void run(){
+		if(outputPath == "")
+		{
+			outputPath = System.getProperty("user.home") + "/recrutai.json";
+			System.out.println("No output path provided. Using " + outputPath);
+		}
+		final List<String> subdomains = Utils.loadSubdomains("/subdomains/recrutai.txt");
+		JSONObject jobsDB = Utils.loadJSON(outputPath);
+		for(String domain : subdomains)
+		{
+			System.out.println("Extracting Jobs from " + domain);
+			try{
+				if(jobsDB.has("domain"))
+					continue;
+				List<JobApplication> jobs = extractJobApplications(domain);
+				extractJobInfos(jobs);
+	            Thread.sleep(delayBetweenSubdomains);
+			}catch (InterruptedException e) {
+				System.out.println("Recrutai Thread finished");
+			}
+			break;
+		}
+		Utils.saveJSON(jobsDB, outputPath);
 	}
-
 }
