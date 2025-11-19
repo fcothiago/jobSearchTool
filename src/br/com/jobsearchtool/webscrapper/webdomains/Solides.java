@@ -13,6 +13,7 @@ import java.util.List;
 
 import org.apache.http.client.utils.URIBuilder;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import br.com.jobsearchtool.webscrapper.JobApplication;
@@ -20,8 +21,11 @@ import br.com.jobsearchtool.webscrapper.Utils;
 import br.com.jobsearchtool.webscrapper.WebDomain;
 import br.com.jobsearchtool.webscrapper.hiringdetails.WorkPlaceType;
 
-public class Solides implements Runnable {
+public class Solides extends WebDomain {
 	final private String apiURL = "https://apigw.solides.com.br/jobs/v3/home/vacancy";
+	public Solides(){
+		subDomainsResource = "/subdomains/solides.txt";
+	}
 	private JSONObject makeAPIRequest(String domain,int page){
 		final String slug = domain.split("\\.")[0];
 		JSONObject obj = null;
@@ -91,48 +95,33 @@ public class Solides implements Runnable {
 		}
 		return jobs;
 	}
-	public List<JobApplication> softSearch() {
-		List<JobApplication> result = new ArrayList<JobApplication>();
-		final List<String> domains = Utils.loadSubdomains("/subdomains/solides.txt");
-		for(String domain : domains){
-			JSONObject obj = makeAPIRequest(domain,1);
-			List<JobApplication> jobs = parseJsonObject(obj);
-			for(JobApplication job : jobs)
-				result.add(job);
-		}
-		return result;
+	public List<JobApplication> softSearch(String domain ) {
+		JSONObject obj = makeAPIRequest(domain,1);
+		List<JobApplication> jobs = parseJsonObject(obj);
+		return jobs;
 	}
-
-	public List<JobApplication> softSearch(LocalTime startDate) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public List<JobApplication> deepSearch() {
-		List<JobApplication> result = new ArrayList<JobApplication>();
-		final List<String> domains = Utils.loadSubdomains("/subdomains/solides.txt");
-		for(String domain : domains)
+	@Override
+	protected List<JSONObject> startSearch(String domain){
+		List<JSONObject> result = new ArrayList<JSONObject>();
+		int lastPage = 1;
+		for(int page = 1;page <= lastPage;page++)
 		{
-			int totalPage = 0;
-			for(int page = 1;page < totalPage;page++)
-			{
+			if(!running)
+				break;
+			try {
 				JSONObject obj = makeAPIRequest(domain,page);
-				totalPage = obj.getInt("totalPages");
+				lastPage = obj.getJSONObject("data").getInt("totalPages");
 				List<JobApplication> jobs = parseJsonObject(obj);
 				for(JobApplication job : jobs)
-					result.add(job);
+				{
+					System.out.println("Got new JobApplication " + job.getApplicationUrl());
+					result.add(job.toJSONObject());
+				}
+				Thread.sleep(delayBetweenJobApplication);
+			}catch(InterruptedException | JSONException e){
+				
 			}
 		}
 		return result;
 	}
-	public List<JobApplication> deepSearch(LocalTime startDate) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	@Override
-	public void run() {
-		// TODO Auto-generated method stub
-		
-	}
-
 }

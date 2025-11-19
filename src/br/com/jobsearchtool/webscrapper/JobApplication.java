@@ -5,6 +5,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.json.JSONObject;
+
 public class JobApplication {
 	@Override
 	public String toString() {
@@ -13,6 +15,17 @@ public class JobApplication {
 				+ companyName + ", countryCode=" + countryCode + ", paymentPerMonth=" + paymentPerMonth
 				+ ", applicationKeyWords=" + applicationKeyWords + ", workplace=" + workplace + ", journey=" + journey
 				+ ", contract=" + contract + "]";
+	}
+	public JSONObject toJSONObject(){
+		JSONObject obj = new JSONObject();
+		obj.put("url",getApplicationUrl());
+		obj.put("title",getApplicationTitle());
+		obj.put("description",getApplicationDescription());
+		obj.put("keywords",getApplicationKeyWords());
+		obj.put("workplace",getWorkplace().toString());
+		obj.put("address",getJobAdress());
+		obj.put("company",getCompanyName());
+		return obj;
 	}
 	private String applicationUrl; 
 	private String applicationTitle; 
@@ -26,8 +39,7 @@ public class JobApplication {
 	private WorkPlaceType workplace = WorkPlaceType.UNKNOWN;
 	private JourneyType journey = JourneyType.UNKNOWW;
 	private ContractType contract = ContractType.UNKNOWN;
-	public JobApplication()
-	{
+	public JobApplication(){
 		
 	}
 	public String getApplicationUrl() {

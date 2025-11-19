@@ -14,15 +14,21 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 
 import br.com.jobsearchtool.webscrapper.JobApplication;
 import br.com.jobsearchtool.webscrapper.Utils;
 import br.com.jobsearchtool.webscrapper.WebDomain;
 import br.com.jobsearchtool.webscrapper.hiringdetails.*;
 
-public class Inhire implements Runnable{
+public class Inhire extends WebDomain{
 	final private String apiURL = "https://api.inhire.app/job-posts/public/pages";
+	public Inhire(){
+		subDomainsResource = "/subdomains/inhire.txt";
+	}
 	private String getApplicationURL(String domain,String jobID,String title) {
 		String url = domain+"/vagas/"+jobID+"/";
 		String urlSuffix = title.toLowerCase();
@@ -68,69 +74,79 @@ public class Inhire implements Runnable{
         }
 		return result;
 	}
-	public List<JobApplication> softSearch(){
+	public List<JobApplication> extractJobApplications(String domain){
 		List<JobApplication> jobs = new ArrayList<JobApplication>();
-		final List<String> domains = Utils.loadSubdomains("/subdomains/inhire.txt");
-		for(String domain : domains)
-		{
-			final String XTenant = domain.split("\\.")[0];
-			try{
-	            HttpClient client = HttpClient.newHttpClient();
-	            HttpRequest request = HttpRequest.newBuilder()
-	            								 .uri(URI.create(apiURL))
-	            					             .header("X-Tenant", XTenant)
-	            					             .GET()
-	            								 .build();
-	            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-	            if(response.statusCode() != 200)
-	            	continue;
-	            for(JobApplication job : parseRequest(response.body(),domain))
-	            	jobs.add(job);           
-			}catch(IOException | InterruptedException e){
-				e.printStackTrace();
-			}
+		final String XTenant = domain.split("\\.")[0];
+		try{
+			HttpClient client = HttpClient.newHttpClient();
+			HttpRequest request = HttpRequest.newBuilder()
+										     .uri(URI.create(apiURL))
+										     .header("X-Tenant", XTenant)
+										     .GET()
+										     .build();
+			HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+			if(response.statusCode() != 200)
+				return jobs;
+			for(JobApplication job : parseRequest(response.body(),domain))
+				jobs.add(job);           
+		}catch(IOException | InterruptedException | JSONException  e){
+
 		}
 		return jobs;
 	}
-	public List<JobApplication> softSearch(LocalTime startDate) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	public List<JobApplication> deepSearch() {
-		List<JobApplication> jobs = softSearch();
-		for(JobApplication job : jobs)
-		{
-			try 
-			{
+	private Thread startJobInfosThread(JobApplication job) {
+		Thread t = new Thread(() -> {
+			try {
 				final String XTenant = job.getApplicationUrl().split("\\.")[0];
 				final String[] fields = job.getApplicationUrl().split("/");
 				final String Id = fields[fields.length - 2];
 				HttpClient client = HttpClient.newHttpClient();
 				HttpRequest request = HttpRequest.newBuilder()
-            								 .uri(URI.create(apiURL+"/"+Id))
-            					             .header("X-Tenant", XTenant)
-            					             .GET()
-            								 .build();
+												 .uri(URI.create(apiURL+"/"+Id))
+												 .header("X-Tenant", XTenant)
+												 .GET()
+												 .build();
 				HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-	            if(response.statusCode() != 200)
-	            	continue;
-	            JSONObject obj = new JSONObject(response.body());
-	            job.setApplicationDescription(obj.getString("about"));
-	            job.setDate(LocalDate.ofInstant(Instant.parse(obj.getString("updatedAt")),ZoneId.systemDefault() ));
-			}catch (IOException | InterruptedException e) {
+				if(response.statusCode() != 200)
+					return;
+				JSONObject obj = new JSONObject(response.body());
+				job.setApplicationDescription(obj.getString("about"));
+				job.setDate(LocalDate.ofInstant(Instant.parse(obj.getString("updatedAt")),ZoneId.systemDefault() ));
+				System.out.println("Got new JobApplication " + job.getApplicationUrl());
+			}catch (IOException | InterruptedException e){
+				System.out.println("Failed to extractJobApplication from " + job.getApplicationUrl());
 				e.printStackTrace();
 			}
-		}
-		return jobs;
+		});
+		t.setDaemon(false);
+		t.start();
+		return t;
 	}
-	public List<JobApplication> deepSearch(LocalTime startDate) {
-		// TODO Auto-generated method stub
-		return null;
+	public void extractJobInfos(List<JobApplication> jobs){
+		for(int i = 0;i < jobs.size();i += numOfThreads)
+		{
+			if(!running)
+				break;
+			try {
+				List<Thread>  threads = new ArrayList<Thread>();
+				List<JobApplication> sublist = (i+numOfThreads < jobs.size()) ? jobs.subList(i, i+numOfThreads ) : jobs.subList(i, jobs.size() )   ;
+				for(int j = 0; j < sublist.size();j++)
+					threads.add( startJobInfosThread(sublist.get(j)) );
+				for(Thread t : threads)
+					t.join();
+				Thread.sleep(delayBetweenJobApplication);
+			}catch (InterruptedException e) {
+
+			}
+		}
 	}
 	@Override
-	public void run() {
-		// TODO Auto-generated method stub
-		
+	protected List<JSONObject> startSearch(String domain){
+		List<JobApplication> jobs = extractJobApplications(domain);
+		extractJobInfos(jobs);
+		List<JSONObject> jsonList = new ArrayList<JSONObject>();
+		for(JobApplication job : jobs)
+			jsonList.add(job.toJSONObject());
+		return jsonList	;
 	}
-
 }

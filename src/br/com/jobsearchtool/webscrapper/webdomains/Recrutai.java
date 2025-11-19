@@ -4,19 +4,15 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -24,20 +20,16 @@ import java.lang.Thread;
 
 import br.com.jobsearchtool.webscrapper.JobApplication;
 import br.com.jobsearchtool.webscrapper.Utils;
+import br.com.jobsearchtool.webscrapper.WebDomain;
 import br.com.jobsearchtool.webscrapper.hiringdetails.WorkPlaceType;
 
-public class Recrutai implements Runnable {
+public class Recrutai extends WebDomain{
 	final private String apiURLSuffix = "/company/public-jobs/*/*/*/*/*/?_=";
-	private String outputPath = "";
-	private JSONObject jobsDB;
-	private int delayBetweenSubdomains = 1000;
-	private int delayBetweenJobApplication = 500;
-	private int numOfThreads = 4;
+	public Recrutai(){
+		subDomainsResource = "/subdomains/recrutai.txt";
+	}
 	private String extractApplicationURL(Element anchor,String domain){
 		return "https://"+domain+"/"+anchor.attr("href");
-	}
-	private WorkPlaceType extractApplicationWorkplace(JSONObject address){
-		return WorkPlaceType.PRESENCIAL;
 	}
 	private List<JobApplication> parseRequest(String json,String domain){
 		List<JobApplication> jobs = new ArrayList<JobApplication>();
@@ -89,7 +81,7 @@ public class Recrutai implements Runnable {
 		}
 		return jobs;
 	}
-	public Thread startJobInfosThread(JobApplication job) {
+	private Thread startJobInfosThread(JobApplication job) {
 		Thread t = new Thread(() -> {
 			try {
 				Document doc = Jsoup.connect(job.getApplicationUrl()).get();
@@ -99,56 +91,47 @@ public class Recrutai implements Runnable {
 				job.setApplicationDescription(obj.getString("description"));
 				Instant instant = Instant.parse(obj.getString("datePosted"));
 				job.setDate(instant.atZone(ZoneId.systemDefault()).toLocalDate());
-				job.setWorkplace(extractApplicationWorkplace(obj));
+				job.setWorkplace(extractWorkPlace(obj));
 				job.setJobAdress(extractJobAdrees(obj));
 				System.out.println("Got new JobApplication " + job.getApplicationUrl());
-			}catch (IOException e){
+			}catch (IOException | JSONException e){
 				System.out.println("Failed to extractJobApplication from " + job.getApplicationUrl());
-				e.printStackTrace();
 			}
 		});
+		t.setDaemon(false);
 		t.start();
 		return t;
 	}
-	public void extractJobInfos(List<JobApplication> jobs) {
+	public void extractJobInfos(List<JobApplication> jobs){
 		for(int i = 0;i < jobs.size();i += numOfThreads)
 		{
+			if(!running)
+				break;
 			try {
-				List<Thread> threads = new ArrayList<Thread>();
-				List<JobApplication> sublist = jobs.subList(i,i+numOfThreads);
+				List<Thread>  threads = new ArrayList<Thread>();
+				List<JobApplication> sublist = (i+numOfThreads < jobs.size()) ? jobs.subList(i, i+numOfThreads ) : jobs.subList(i, jobs.size() )   ;
 				for(int j = 0; j < sublist.size();j++)
 					threads.add( startJobInfosThread(sublist.get(j)) );
 				for(Thread t : threads)
 					t.join();
 				Thread.sleep(delayBetweenJobApplication);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+			}catch (InterruptedException e) {
+
 			}
 		}
 	}
 	@Override
-	public void run(){
-		if(outputPath == "")
-		{
-			outputPath = System.getProperty("user.home") + "/recrutai.json";
-			System.out.println("No output path provided. Using " + outputPath);
+	public List<JSONObject> startSearch(String domain){
+		List<JSONObject> jsonList = new ArrayList<JSONObject>();
+		try{
+			List<JobApplication> jobs = extractJobApplications(domain);
+			extractJobInfos(jobs);
+			for(JobApplication job : jobs)
+				jsonList.add(job.toJSONObject());
+			Thread.sleep(delayBetweenSubdomains);
+		}catch (InterruptedException e) {
+			
 		}
-		final List<String> subdomains = Utils.loadSubdomains("/subdomains/recrutai.txt");
-		JSONObject jobsDB = Utils.loadJSON(outputPath);
-		for(String domain : subdomains)
-		{
-			System.out.println("Extracting Jobs from " + domain);
-			try{
-				if(jobsDB.has("domain"))
-					continue;
-				List<JobApplication> jobs = extractJobApplications(domain);
-				extractJobInfos(jobs);
-	            Thread.sleep(delayBetweenSubdomains);
-			}catch (InterruptedException e) {
-				System.out.println("Recrutai Thread finished");
-			}
-			break;
-		}
-		Utils.saveJSON(jobsDB, outputPath);
+		return jsonList;
 	}
 }
