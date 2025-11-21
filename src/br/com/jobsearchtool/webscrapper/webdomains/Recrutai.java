@@ -68,9 +68,9 @@ public class Recrutai extends WebDomain{
 			final String apiURL = "https://" + domain + apiURLSuffix + System.currentTimeMillis();
 			HttpClient client = HttpClient.newHttpClient();
 			HttpRequest request = HttpRequest.newBuilder()
-					.uri(URI.create(apiURL))
-					.GET()
-					.build();
+											 .uri(URI.create(apiURL))
+											 .GET()
+											 .build();
 			HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 			if(response.statusCode() != 200)
 				return jobs;

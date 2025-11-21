@@ -25,6 +25,7 @@ public class JobApplication {
 		obj.put("workplace",getWorkplace().toString());
 		obj.put("address",getJobAdress());
 		obj.put("company",getCompanyName());
+		obj.put("date",getDate());
 		return obj;
 	}
 	private String applicationUrl; 

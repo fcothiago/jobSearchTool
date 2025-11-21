@@ -8,32 +8,36 @@ public class main {
 	public static void main(String[] args) throws InterruptedException {
 		System.out.println("Hello World Seu Desempregado");
 		
-		Inhire domainInhire = new Inhire();
-		Solides domainSolides = new Solides();
-		Recrutai domainRecrutai = new Recrutai();
+		//Inhire domainInhire = new Inhire();
+		//Solides domainSolides = new Solides();
+		//Recrutai domainRecrutai = new Recrutai();
+		Quickin domainQuickin = new Quickin();
 
-		Thread taskInhire = new Thread(domainInhire); 
-		Thread taskSolides = new Thread(domainSolides); 
-		Thread taskRecrutai = new Thread(domainRecrutai); 
+		//Thread taskInhire = new Thread(domainInhire); 
+		//Thread taskSolides = new Thread(domainSolides); 
+		//Thread taskRecrutai = new Thread(domainRecrutai); 
+		Thread taskQuickin = new Thread(domainQuickin); 
 		
-		taskInhire.start();
-		taskSolides.start();
-		taskRecrutai.start();
+		//taskInhire.start();
+		//taskSolides.start();
+		//taskRecrutai.start();
+		taskQuickin.start();
 
 		Scanner sc = new Scanner(System.in);
 		sc.nextLine();
 		
-		domainInhire.sendFinishSignal();
-		domainSolides.sendFinishSignal();
-		domainRecrutai.sendFinishSignal();
-
-		taskInhire.join();
-		taskSolides.join();
-		taskRecrutai.join();
+		//domainInhire.sendFinishSignal();
+		//domainSolides.sendFinishSignal();
+		//domainRecrutai.sendFinishSignal();
+		domainQuickin.sendFinishSignal();
 		
-		domainInhire.exportJSON();
-		domainRecrutai.exportJSON();
-		domainRecrutai.exportJSON();
-
+		//taskInhire.join();
+		//taskSolides.join();
+		//taskRecrutai.join();
+		taskQuickin.join();
+		
+		//domainInhire.exportJSON();
+		//domainRecrutai.exportJSON();
+		//domainSolides.exportJSON();
 	}
 }
